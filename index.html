@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Asientos de la Sprinter</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#eef1ec; --panel:#ffffff; --ink:#1d2a24; --muted:#5d6b64;
+  --seat:#f4c9a4; --seat-ink:#3b2410; --accent:#1f5f4a; --line:#cfd7d1; --empty:#e3e7e3;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121815; --panel:#1b2420; --ink:#e8eee9; --muted:#9baba3;
+    --seat:#a8683a; --seat-ink:#fff4ea; --accent:#6fd0aa; --line:#2f3b35; --empty:#242e29;
+  }
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;line-height:1.4}
+main{max-width:460px;margin:0 auto;padding:20px 14px 32px}
+h1{font-size:1.35rem;margin:0 0 4px}
+.date{color:var(--muted);margin:0 0 14px;font-size:.95rem}
+.nav{display:flex;gap:8px;margin-bottom:16px}
+.nav button{flex:1;padding:10px 8px;font:inherit;font-size:.9rem;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;cursor:pointer}
+.nav button.today{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.nav button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.van{background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 10px 10px;padding:14px 10px}
+.front{text-align:center;font-size:.8rem;color:var(--muted);margin-bottom:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr .45fr 1fr;gap:8px}
+.s{background:var(--seat);color:var(--seat-ink);border-radius:8px;padding:8px 4px;text-align:center;min-height:62px;display:flex;flex-direction:column;justify-content:center}
+.s b{font-size:.75rem;opacity:.8}
+.s span{font-size:.95rem;font-weight:600;overflow-wrap:anywhere}
+.s.x{background:var(--empty);color:var(--muted)}
+.gap{min-height:62px}
+.row5{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.list{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.9rem}
+.list div{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)}
+.list div:last-child{border-bottom:0}
+.note{color:var(--muted);font-size:.8rem;margin-top:12px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Asientos de la Sprinter</h1>
+  <p class="date" id="fecha"></p>
+  <div class="nav">
+    <button id="ant">Día anterior</button>
+    <button id="hoy" class="today">Hoy</button>
+    <button id="sig">Día siguiente</button>
+  </div>
+  <div class="van">
+    <div class="front">Parte delantera</div>
+    <div class="grid" id="grid"></div>
+  </div>
+  <div class="list" id="lista"></div>
+  <p class="note">La rotación avanza un asiento cada día laborable. Sábados, domingos y feriados no cuentan: esos días se muestra el siguiente día laborable. Quien está en el 15 pasa al 1.</p>
+</main>
+<script>
+// Orden inicial = asiento 1 a 15 en la fecha de inicio. Edita aquí para cambiar nombres o fecha.
+var PERSONAS=["Paolo","Angie","Calixto","Diana","Piero","Jessica","Diego","Bryan Barga","Medina","Russell","Alex Cipiran","Marco","Robert","Erick","Adriana"];
+var INICIO=Date.UTC(2026,8,29); // 29/09/2026
+var N=PERSONAS.length, DIA=86400000, mostrada;
+
+// Feriados nacionales de Perú (AAAA-MM-DD). Agrega o quita fechas aquí.
+// Los de 2027 siguen las fechas fijas de ley y la Semana Santa: conviene confirmarlos cuando se publique el calendario oficial.
+var FERIADOS=["2026-10-08","2026-12-08","2026-12-09","2026-12-25",
+"2027-01-01","2027-03-25","2027-03-26","2027-05-01","2027-06-07","2027-06-29","2027-07-23","2027-07-28","2027-07-29","2027-08-06","2027-08-30","2027-10-08","2027-11-01","2027-12-08","2027-12-09","2027-12-25"].map(function(x){var a=x.split('-');return Date.UTC(+a[0],+a[1]-1,+a[2]);});
+// "Día sin rotación": sábado, domingo o feriado
+function esFin(t){ var w=new Date(t).getUTCDay(); return w===0||w===6||FERIADOS.indexOf(t)>=0; }
+function siguienteLab(t){ do{ t+=DIA; }while(esFin(t)); return t; }
+function anteriorLab(t){ do{ t-=DIA; }while(esFin(t)); return t; }
+function hoyLab(){
+  var h=new Date();
+  var t=Date.UTC(h.getFullYear(),h.getMonth(),h.getDate());
+  while(esFin(t)) t+=DIA; // fin de semana o feriado: muestra el siguiente día laborable
+  return t;
+}
+// cantidad de rotaciones: solo cuentan los días de lunes a viernes
+function rotaciones(t){
+  var n=0, a=INICIO, b=t, s=1;
+  if(b<a){ a=t; b=INICIO; s=-1; }
+  for(var x=a+DIA;x<=b;x+=DIA){ if(!esFin(x)) n++; }
+  return n*s;
+}
+function diasDesdeInicio(){ return rotaciones(mostrada); }
+function quien(asiento,d){ return PERSONAS[(((asiento-1-d)%N)+N)%N]; }
+function seat(n,d){ return '<div class="s"><b>'+n+'</b><span>'+quien(n,d)+'</span></div>'; }
+
+function render(){
+  var d=diasDesdeInicio();
+  var f=new Date(mostrada);
+  var txt=f.toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+  document.getElementById('fecha').textContent=txt;
+  var rows=[[1,2,null,0],[3,4,null,15],[5,6,null,14],[7,8,null,13]];
+  var h='';
+  rows.forEach(function(r){
+    h+=seat(r[0],d)+seat(r[1],d)+'<div class="gap"></div>';
+    h+= r[3]===0 ? '<div class="s"><b>Fijo</b><span>Richardt Ruiz</span></div>' : seat(r[3],d);
+  });
+  h+='<div class="row5">'+seat(9,d)+seat(10,d)+seat(11,d)+seat(12,d)+'</div>';
+  document.getElementById('grid').innerHTML=h;
+  var l='';
+  for(var n=1;n<=N;n++){ l+='<div><span>Asiento '+n+'</span><strong>'+quien(n,d)+'</strong></div>'; }
+  document.getElementById('lista').innerHTML=l;
+}
+document.getElementById('ant').onclick=function(){mostrada=anteriorLab(mostrada);render();};
+document.getElementById('sig').onclick=function(){mostrada=siguienteLab(mostrada);render();};
+document.getElementById('hoy').onclick=function(){mostrada=hoyLab();render();};
+mostrada=hoyLab();
+render();
+</script>
+</body>
+</html>
