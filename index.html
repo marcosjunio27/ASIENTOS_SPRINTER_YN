@@ -67,7 +67,7 @@ var N=PERSONAS.length, DIA=86400000, mostrada;
 
 // Feriados nacionales de Perú (AAAA-MM-DD). Agrega o quita fechas aquí.
 // Los de 2027 siguen las fechas fijas de ley y la Semana Santa: conviene confirmarlos cuando se publique el calendario oficial.
-var FERIADOS=["2026-10-08","2026-12-08","2026-12-09","2026-12-25",
+var FERIADOS=["2026-10-08","2026-10-12","2026-12-08","2026-12-09","2026-12-25",
 "2027-01-01","2027-03-25","2027-03-26","2027-05-01","2027-06-07","2027-06-29","2027-07-23","2027-07-28","2027-07-29","2027-08-06","2027-08-30","2027-10-08","2027-11-01","2027-12-08","2027-12-09","2027-12-25"].map(function(x){var a=x.split('-');return Date.UTC(+a[0],+a[1]-1,+a[2]);});
 // "Día sin rotación": sábado, domingo o feriado
 function esFin(t){ var w=new Date(t).getUTCDay(); return w===0||w===6||FERIADOS.indexOf(t)>=0; }
